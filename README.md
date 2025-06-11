@@ -26,16 +26,49 @@ cd RedditPython
 
 ### 2. Instalar dependencias
 
-Para Windows:
-```
-install.bat
-```
-
-O manualmente:
+manualmente:
 ```bash
 pip install -r requirements.txt
 python -m spacy download es_core_news_sm
 ```
+
+### 3. Configurar variables de entorno
+
+Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
+
+```
+# Reddit API credentials
+REDDIT_CLIENT_ID=tu_client_id_aqui
+REDDIT_CLIENT_SECRET=tu_client_secret_aqui
+REDDIT_USER_AGENT=PodcastScraper/1.0
+REDDIT_USERNAME=tu_usuario_reddit
+REDDIT_PASSWORD=tu_contraseña_reddit
+
+# OpenRouter API
+OPENROUTER_API_KEY=tu_openrouter_key_aqui
+OPENROUTER_URL=https://openrouter.ai/api/v1/chat/completions
+
+# DeepSeek API
+DEEPSEEK_API_KEY=tu_deepseek_key_aqui
+DEEPSEEK_URL=https://api.deepseek.com
+
+# Pexel API
+PEXEL_API_KEY=tu_pexel_api_key_aqui
+
+# OpenAI (DALL-E) API
+OPENAI_API_KEY=tu_openai_api_key_aqui
+
+# Stability AI (Stable Diffusion) API
+STABILITY_API_KEY=tu_stability_api_key_aqui
+```
+
+Puedes copiar el archivo `.env.example` incluido en el proyecto y renombrarlo a `.env`:
+
+```bash
+copy .env.example .env
+```
+
+Luego, edita el archivo `.env` con tus propias claves de API.
 
 
 ## Estructura del proyecto
@@ -64,7 +97,9 @@ python main.py
 ## Solución de problemas
 
 - Verifica que FFmpeg esté instalado y en el PATH del sistema
-- Para problemas con las APIs, revisa las claves en los archivos correspondientes
+- Asegúrate de que el archivo `.env` esté correctamente configurado con todas las claves API necesarias
+- Si tienes problemas con una API específica, verifica que la clave correspondiente en el archivo `.env` sea válida
+- Si necesitas actualizar alguna clave API, solo necesitas cambiarla en el archivo `.env`, no en el código fuente
 
 ## Créditos
 

@@ -6,6 +6,10 @@ from pathlib import Path
 import json
 import colorama
 from colorama import Fore, Back, Style
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Inicializar colorama para Windows
 colorama.init()
@@ -44,7 +48,7 @@ def verificar_requisitos():
         'deep_translator': 'Para traducir textos',
         'spacy': 'Para análisis de lenguaje natural',
         'edge_tts': 'Para generar audio con Edge TTS',
-        
+        'dotenv': 'Para cargar variables de entorno',
         'colorama': 'Para colorear la salida en terminal',
         'openai': 'Para acceder a servicios de IA',
         'PIL': 'Para procesamiento de imágenes (Pillow)'
@@ -56,6 +60,8 @@ def verificar_requisitos():
         try:
             if modulo == 'PIL':
                 __import__('PIL.Image')
+            elif modulo == 'dotenv':
+                __import__('dotenv')
             else:
                 __import__(modulo)
         except ImportError:
@@ -76,6 +82,8 @@ def verificar_requisitos():
             nombre_pip = modulo
             if modulo == 'PIL':
                 nombre_pip = 'Pillow'
+            elif modulo == 'dotenv':
+                nombre_pip = 'python-dotenv'
             comandos.append(nombre_pip)
         
         print(f"{Fore.GREEN}  pip install {' '.join(comandos)}{Style.RESET_ALL}")
