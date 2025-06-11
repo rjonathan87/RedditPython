@@ -29,7 +29,21 @@ deepseek_url = "https://api.deepseek.com"
 # Configuración de APIs
 client_deepseek = OpenAI(api_key=deepseek_key, base_url=deepseek_url)
 
-nlp = spacy.load("es_core_news_sm")
+# Cargar el modelo de spaCy con manejo de errores
+try:
+    nlp = spacy.load("es_core_news_sm")
+    print("✅ Modelo de spaCy cargado correctamente")
+except OSError:
+    print("⚠️ No se encontró el modelo de spaCy 'es_core_news_sm'. Intentando descargarlo...")
+    try:
+        import subprocess
+        subprocess.run(["python", "-m", "spacy", "download", "es_core_news_sm"], check=True)
+        nlp = spacy.load("es_core_news_sm")
+        print("✅ Modelo de spaCy descargado e instalado correctamente")
+    except Exception as e:
+        print(f"❌ Error al descargar el modelo: {str(e)}")
+        print("⚠️ Usando un modelo genérico como alternativa...")
+        nlp = spacy.blank("es")  # Usar un modelo genérico si no se puede descargar
 
 # Mantener un registro de historias consultadas
 historias_consultadas = set()

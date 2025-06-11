@@ -63,7 +63,6 @@ python main.py
 
 ## Solución de problemas
 
-- Si MoviePy no funciona, el programa intentará usar OpenCV como alternativa
 - Verifica que FFmpeg esté instalado y en el PATH del sistema
 - Para problemas con las APIs, revisa las claves en los archivos correspondientes
 

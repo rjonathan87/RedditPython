@@ -44,7 +44,7 @@ def verificar_requisitos():
         'deep_translator': 'Para traducir textos',
         'spacy': 'Para análisis de lenguaje natural',
         'edge_tts': 'Para generar audio con Edge TTS',
-        'moviepy': 'Para edición de video',
+        
         'colorama': 'Para colorear la salida en terminal',
         'openai': 'Para acceder a servicios de IA',
         'PIL': 'Para procesamiento de imágenes (Pillow)'
@@ -230,84 +230,6 @@ def generar_imagen():
         return resultado
     except Exception as e:
         print(f"{Fore.RED}❌ Error al generar imagen: {str(e)}{Style.RESET_ALL}")
-        input("Presiona Enter para continuar...")
-        return False
-
-def crear_video():
-    """Crea el video con la imagen y el audio"""
-    try:
-        if not historia_actual["id"]:
-            print(f"{Fore.RED}❌ No hay ninguna historia activa. Primero obtén una historia.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-        
-        mostrar_titulo()
-        print(f"{Fore.YELLOW}🎬 PASO 4: CREAR VIDEO{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}-" * 70)
-        print(f"Creando video para la historia: {historia_actual['titulo']}")
-        
-        ruta_historia = f"historias/{historia_actual['id']}"
-        ruta_audio = f"{ruta_historia}/narracion.mp3"
-        ruta_imagen = f"{ruta_historia}/imagenes/imagen_1.png"
-        ruta_video = f"{ruta_historia}/video.mp4"
-        
-        if not os.path.exists(ruta_audio):
-            print(f"{Fore.RED}❌ No se encontró el archivo de audio. Primero genera el audio.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-            
-        if not os.path.exists(ruta_imagen):
-            print(f"{Fore.YELLOW}⚠️ No se encontró la imagen. Usando una imagen genérica...{Style.RESET_ALL}")
-            # Usar una imagen por defecto
-            os.makedirs(os.path.dirname(ruta_imagen), exist_ok=True)
-            if not os.path.exists("recursos"):
-                os.makedirs("recursos", exist_ok=True)
-            
-            # Crear imagen por defecto si no existe
-            if not os.path.exists("recursos/imagen_default.png"):
-                from PIL import Image, ImageDraw
-                img = Image.new('RGB', (1080, 1920), color=(0, 0, 0))
-                d = ImageDraw.Draw(img)
-                d.text((540, 960), "Historia", fill=(255, 255, 255), anchor="mm")
-                img.save("recursos/imagen_default.png")
-                
-            import shutil
-            shutil.copy("recursos/imagen_default.png", ruta_imagen)
-        
-        # Importar moviepy para crear el video
-        from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
-        
-        print("🔄 Generando video...")
-        audio = AudioFileClip(ruta_audio)
-        imagen = ImageClip(ruta_imagen).set_duration(audio.duration)
-        
-        # Ajustar la imagen para que ocupe toda la pantalla
-        imagen = imagen.resize(height=1920)
-        imagen = imagen.resize(width=1080)
-        
-        video = CompositeVideoClip([imagen])
-        video = video.set_audio(audio)
-        
-        # Guardar el video
-        video.write_videofile(ruta_video, codec="libx264", fps=24)
-        print(f"{Fore.GREEN}✅ Video generado en {ruta_video}")
-        
-        # Generar subtítulos
-        print("💬 Añadiendo subtítulos al video...")
-        ruta_video_subtitulos = f"{ruta_historia}/video_subtitulos.mp4"
-        import scriptVideo
-        scriptVideo.main(ruta_video, ruta_video_subtitulos)
-        
-        # Actualizar estado
-        historia_actual["paso_actual"] = 4
-        if "Crear video" not in historia_actual["pasos_completados"]:
-            historia_actual["pasos_completados"].append("Crear video")
-        
-        print(f"{Fore.GREEN}✅ Video con subtítulos creado con éxito")
-        input(f"{Fore.YELLOW}Presiona Enter para continuar...{Style.RESET_ALL}")
-        return True
-    except Exception as e:
-        print(f"{Fore.RED}❌ Error al crear video: {str(e)}{Style.RESET_ALL}")
         input("Presiona Enter para continuar...")
         return False
 
