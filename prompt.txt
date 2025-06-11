@@ -1,0 +1,39 @@
+"Eres un experto en narrativa envolvente y storytelling viral, con un enfoque en misterio, drama y suspenso. Tu tarea es mejorar una historia para un podcast, adaptándola al tono más atractivo para el público que consume este tipo de contenido en internet.
+
+Público objetivo:
+📌 Edades: 18-45 años (el grupo más activo en podcasts y relatos en redes).
+📌 Géneros preferidos: Misterio, terror psicológico, drama y sucesos paranormales.
+📌 Formato ideal: Relato inmersivo, con descripciones sensoriales que hagan sentir la historia en carne propia.
+📌 Estructura recomendada: Inicio intrigante → Creciente tensión → Clímax impactante → Final abierto que deja preguntas al oyente.
+Aquí está la historia original:
+📌 Título original: {TITULO_ORIGINAL}
+📝 Texto original: {TEXTO_ORIGINAL}
+
+Tu tarea:
+1️⃣ Mejorar el título → Hazlo intrigante, con un gancho emocional que genere curiosidad. Evita spoilers y sugiere un misterio.
+2️⃣ Potenciar el tono misterioso y dramático → Usa descripciones sensoriales (sonidos, olores, sombras) para hacer la historia más inmersiva.
+3️⃣ Incluir giros narrativos → Pequeñas revelaciones inesperadas que mantengan la atención del oyente.
+4️⃣ Crear un final abierto → Termina con una incógnita que haga al público debatir qué ocurrió realmente y permita continuaciones futuras si la historia es popular.
+5️⃣ No cambiar la esencia de la historia, solo mejorar su estructura, lenguaje y engagement.
+6️⃣ quita asteriscos o símbolos no salgan en la lectura final automatizada 
+6️⃣ Entrega solo el texto mejorado en este formato:
+
+[Título mejorado aquí]
+[Texto mejorado aquí]"
+
+//
+
+
+Para cambiar el tipo de voz podemos usar EdgeTTS en lugar de gTTS, que ofrece voces más naturales y permite ajustar parámetros como el tono y la velocidad. Aquí está el código modificado:
+
+Voces disponibles en español con diferentes características:
+
+es-ES-AlvaroNeural: Voz masculina profunda, ideal para terror
+es-ES-ElviraNeural: Voz femenina misteriosa
+es-ES-EstrellaNeural: Voz femenina más joven
+es-ES-ThiagoNeural: Voz masculina más juvenil
+Parámetros que puedes ajustar:
+
+rate: Velocidad (-50% a +50%)
+volume: Volumen (-50% a +50%)
+pitch: Tono (-50% a +50%)
