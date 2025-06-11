@@ -6,30 +6,49 @@ import json
 from deep_translator import GoogleTranslator
 import spacy
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Configuración de Reddit API
 reddit = praw.Reddit(
-    client_id="GYP67L7MTnQyAR4HkXXCSQ",
-    client_secret="v7b-LL8UgAreVv2TEctRIe8_9Ockrg",
-    user_agent="PodcastScraper/1.0",
-    username="No-Panic7178",
-    password="t2i86t7D9X_$$",
+    client_id=os.getenv("REDDIT_CLIENT_ID"),
+    client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
+    user_agent=os.getenv("REDDIT_USER_AGENT"),
+    username=os.getenv("REDDIT_USERNAME"),
+    password=os.getenv("REDDIT_PASSWORD"),
 )
 
 # Configuración de OpenRouter
-openrouter_key = (
-    "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"
-)
-openrouter_url = "https://openrouter.ai/api/v1/chat/completions"
+openrouter_key = os.getenv("OPENROUTER_API_KEY")
+openrouter_url = os.getenv("OPENROUTER_URL", "https://openrouter.ai/api/v1/chat/completions")
 
 # Configuración de DeepSeek
-deepseek_key = "sk-df56fb823bbd4b24a6f2a8d9553b7dd0"
-deepseek_url = "https://api.deepseek.com"
+deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+deepseek_url = os.getenv("DEEPSEEK_URL", "https://api.deepseek.com")
 
 # Configuración de APIs
 client_deepseek = OpenAI(api_key=deepseek_key, base_url=deepseek_url)
 
-nlp = spacy.load("es_core_news_sm")
+# apikey pexel
+pexel_key = os.getenv("PEXEL_API_KEY")
+
+# Cargar el modelo de spaCy con manejo de errores
+try:
+    nlp = spacy.load("es_core_news_sm")
+    print("✅ Modelo de spaCy cargado correctamente")
+except OSError:
+    print("⚠️ No se encontró el modelo de spaCy 'es_core_news_sm'. Intentando descargarlo...")
+    try:
+        import subprocess
+        subprocess.run(["python", "-m", "spacy", "download", "es_core_news_sm"], check=True)
+        nlp = spacy.load("es_core_news_sm")
+        print("✅ Modelo de spaCy descargado e instalado correctamente")
+    except Exception as e:
+        print(f"❌ Error al descargar el modelo: {str(e)}")
+        print("⚠️ Usando un modelo genérico como alternativa...")
+        nlp = spacy.blank("es")  # Usar un modelo genérico si no se puede descargar
 
 # Mantener un registro de historias consultadas
 historias_consultadas = set()
@@ -256,5 +275,3 @@ def obtener_historia():
         print(f"Error obteniendo historia: {e}")
         return None, None, None
 
-# apikey pexel
-# 8hgXPG96C557Bahlc08hNveoB5rIBMBNz03f4q169KFWsMBuClHxeHha

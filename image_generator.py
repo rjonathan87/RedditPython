@@ -5,16 +5,20 @@ import json
 import spacy
 from collections import Counter
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Intentar importar OpenAI de la nueva manera
 try:
     from openai import OpenAI
-    client = OpenAI(api_key="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")
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
     USING_NEW_API = True
 except ImportError:
     # Fallback a la versión antigua
     import openai
-    openai.api_key = "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"
+    openai.api_key = os.getenv("OPENAI_API_KEY")
     USING_NEW_API = False
 
 def mostrar_progreso(porcentaje, mensaje="Progreso"):
@@ -63,7 +67,7 @@ def generar_imagen_stable_diffusion(prompt):
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
-            "Authorization": "sk-4JjEUEBhcpmLF5lH8dBa5zTLbhGKVdzHMwmx4Y6zB6xCwBIq"  # Demo key, reemplazar si necesario
+            "Authorization": f"Bearer {os.getenv('STABILITY_API_KEY')}"
         }
         
         payload = {

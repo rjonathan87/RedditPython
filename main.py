@@ -6,6 +6,10 @@ from pathlib import Path
 import json
 import colorama
 from colorama import Fore, Back, Style
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 # Inicializar colorama para Windows
 colorama.init()
@@ -44,7 +48,7 @@ def verificar_requisitos():
         'deep_translator': 'Para traducir textos',
         'spacy': 'Para análisis de lenguaje natural',
         'edge_tts': 'Para generar audio con Edge TTS',
-        'moviepy': 'Para edición de video',
+        'dotenv': 'Para cargar variables de entorno',
         'colorama': 'Para colorear la salida en terminal',
         'openai': 'Para acceder a servicios de IA',
         'PIL': 'Para procesamiento de imágenes (Pillow)'
@@ -56,6 +60,8 @@ def verificar_requisitos():
         try:
             if modulo == 'PIL':
                 __import__('PIL.Image')
+            elif modulo == 'dotenv':
+                __import__('dotenv')
             else:
                 __import__(modulo)
         except ImportError:
@@ -76,6 +82,8 @@ def verificar_requisitos():
             nombre_pip = modulo
             if modulo == 'PIL':
                 nombre_pip = 'Pillow'
+            elif modulo == 'dotenv':
+                nombre_pip = 'python-dotenv'
             comandos.append(nombre_pip)
         
         print(f"{Fore.GREEN}  pip install {' '.join(comandos)}{Style.RESET_ALL}")
@@ -199,152 +207,6 @@ def generar_audio():
         input("Presiona Enter para continuar...")
         return False
 
-def generar_imagen():
-    """Genera la imagen para la historia actual"""
-    try:
-        if not historia_actual["id"]:
-            print(f"{Fore.RED}❌ No hay ninguna historia activa. Primero obtén una historia.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-        
-        mostrar_titulo()
-        print(f"{Fore.YELLOW}🖼️ PASO 3: GENERAR IMAGEN{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}-" * 70)
-        print(f"Generando imagen para la historia: {historia_actual['titulo']}")
-        
-        # Importar y ejecutar la generación de imagen
-        from image_generator import generar_imagenes
-        resultado = generar_imagenes(historia_actual["id"], historia_actual["titulo"])
-        
-        if resultado:
-            # Actualizar estado
-            historia_actual["paso_actual"] = 3
-            if "Generar imagen" not in historia_actual["pasos_completados"]:
-                historia_actual["pasos_completados"].append("Generar imagen")
-            
-            print(f"{Fore.GREEN}✅ Imagen generada con éxito")
-        else:
-            print(f"{Fore.RED}❌ No se pudo generar la imagen")
-        
-        input(f"{Fore.YELLOW}Presiona Enter para continuar...{Style.RESET_ALL}")
-        return resultado
-    except Exception as e:
-        print(f"{Fore.RED}❌ Error al generar imagen: {str(e)}{Style.RESET_ALL}")
-        input("Presiona Enter para continuar...")
-        return False
-
-def crear_video():
-    """Crea el video con la imagen y el audio"""
-    try:
-        if not historia_actual["id"]:
-            print(f"{Fore.RED}❌ No hay ninguna historia activa. Primero obtén una historia.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-        
-        mostrar_titulo()
-        print(f"{Fore.YELLOW}🎬 PASO 4: CREAR VIDEO{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}-" * 70)
-        print(f"Creando video para la historia: {historia_actual['titulo']}")
-        
-        ruta_historia = f"historias/{historia_actual['id']}"
-        ruta_audio = f"{ruta_historia}/narracion.mp3"
-        ruta_imagen = f"{ruta_historia}/imagenes/imagen_1.png"
-        ruta_video = f"{ruta_historia}/video.mp4"
-        
-        if not os.path.exists(ruta_audio):
-            print(f"{Fore.RED}❌ No se encontró el archivo de audio. Primero genera el audio.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-            
-        if not os.path.exists(ruta_imagen):
-            print(f"{Fore.YELLOW}⚠️ No se encontró la imagen. Usando una imagen genérica...{Style.RESET_ALL}")
-            # Usar una imagen por defecto
-            os.makedirs(os.path.dirname(ruta_imagen), exist_ok=True)
-            if not os.path.exists("recursos"):
-                os.makedirs("recursos", exist_ok=True)
-            
-            # Crear imagen por defecto si no existe
-            if not os.path.exists("recursos/imagen_default.png"):
-                from PIL import Image, ImageDraw
-                img = Image.new('RGB', (1080, 1920), color=(0, 0, 0))
-                d = ImageDraw.Draw(img)
-                d.text((540, 960), "Historia", fill=(255, 255, 255), anchor="mm")
-                img.save("recursos/imagen_default.png")
-                
-            import shutil
-            shutil.copy("recursos/imagen_default.png", ruta_imagen)
-        
-        # Importar moviepy para crear el video
-        from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip
-        
-        print("🔄 Generando video...")
-        audio = AudioFileClip(ruta_audio)
-        imagen = ImageClip(ruta_imagen).set_duration(audio.duration)
-        
-        # Ajustar la imagen para que ocupe toda la pantalla
-        imagen = imagen.resize(height=1920)
-        imagen = imagen.resize(width=1080)
-        
-        video = CompositeVideoClip([imagen])
-        video = video.set_audio(audio)
-        
-        # Guardar el video
-        video.write_videofile(ruta_video, codec="libx264", fps=24)
-        print(f"{Fore.GREEN}✅ Video generado en {ruta_video}")
-        
-        # Generar subtítulos
-        print("💬 Añadiendo subtítulos al video...")
-        ruta_video_subtitulos = f"{ruta_historia}/video_subtitulos.mp4"
-        import scriptVideo
-        scriptVideo.main(ruta_video, ruta_video_subtitulos)
-        
-        # Actualizar estado
-        historia_actual["paso_actual"] = 4
-        if "Crear video" not in historia_actual["pasos_completados"]:
-            historia_actual["pasos_completados"].append("Crear video")
-        
-        print(f"{Fore.GREEN}✅ Video con subtítulos creado con éxito")
-        input(f"{Fore.YELLOW}Presiona Enter para continuar...{Style.RESET_ALL}")
-        return True
-    except Exception as e:
-        print(f"{Fore.RED}❌ Error al crear video: {str(e)}{Style.RESET_ALL}")
-        input("Presiona Enter para continuar...")
-        return False
-
-def dividir_video():
-    """Divide el video en segmentos para redes sociales"""
-    try:
-        if not historia_actual["id"]:
-            print(f"{Fore.RED}❌ No hay ninguna historia activa. Primero obtén una historia.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-        
-        mostrar_titulo()
-        print(f"{Fore.YELLOW}✂️ PASO 5: DIVIDIR VIDEO{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}-" * 70)
-        print(f"Dividiendo video para la historia: {historia_actual['titulo']}")
-        
-        # Importar y ejecutar la división del video
-        from video_splitter import dividir_video as split_video
-        resultado = split_video(historia_actual["id"])
-        
-        if resultado:
-            # Actualizar estado
-            historia_actual["paso_actual"] = 5
-            if "Dividir video" not in historia_actual["pasos_completados"]:
-                historia_actual["pasos_completados"].append("Dividir video")
-            
-            print(f"{Fore.GREEN}✅ Video dividido con éxito")
-        else:
-            print(f"{Fore.RED}❌ No se pudo dividir el video")
-        
-        input(f"{Fore.YELLOW}Presiona Enter para continuar...{Style.RESET_ALL}")
-        return resultado
-    except Exception as e:
-        print(f"{Fore.RED}❌ Error al dividir video: {str(e)}{Style.RESET_ALL}")
-        input("Presiona Enter para continuar...")
-        return False
-
 def ejecutar_todos_pasos():
     """Ejecuta todos los pasos automáticamente"""
     mostrar_titulo()
@@ -358,15 +220,7 @@ def ejecutar_todos_pasos():
     # Paso 2: Generar audio
     if not generar_audio():
         return
-    
-    # Paso 3: Generar imagen
-    if not generar_imagen():
-        return
-    
-    # Paso 5: Dividir video
-    if not dividir_video():
-        return
-    
+        
     # Todo completado
     mostrar_titulo()
     print(f"{Fore.GREEN}🎉 ¡TODOS LOS PASOS COMPLETADOS CON ÉXITO!{Style.RESET_ALL}")
@@ -434,26 +288,23 @@ def mostrar_menu_principal():
         print(f"{Fore.WHITE}-- PROCESO PASO A PASO --")
         print(f"{Fore.CYAN}1. 🔍 Obtener nueva historia de Reddit")
         print(f"{Fore.CYAN}2. 🔊 Generar audio")
-        print(f"{Fore.CYAN}3. 🖼️ Generar imagen")
-        print(f"{Fore.CYAN}4. 🎬 Crear video con subtítulos")
-        print(f"{Fore.CYAN}5. ✂️ Dividir video en segmentos")
         
         # Opción de flujo automático
         print(f"{Fore.WHITE}\n-- PROCESO AUTOMÁTICO --")
-        print(f"{Fore.CYAN}6. 🚀 Ejecutar todos los pasos automáticamente")
+        print(f"{Fore.CYAN}3. 🚀 Ejecutar todos los pasos automáticamente")
         
         # Opciones adicionales
         print(f"{Fore.WHITE}\n-- OPCIONES ADICIONALES --")
-        print(f"{Fore.CYAN}7. 📖 Ver contenido de la historia actual")
-        print(f"{Fore.CYAN}8. 📂 Abrir carpeta de la historia actual")
+        print(f"{Fore.CYAN}4. 📖 Ver contenido de la historia actual")
+        print(f"{Fore.CYAN}5. 📂 Abrir carpeta de la historia actual")
         
         # Salir
         print(f"{Fore.WHITE}\n-- SISTEMA --")
-        print(f"{Fore.CYAN}9. ❌ Salir")
+        print(f"{Fore.CYAN}6. ❌ Salir")
         
         print(f"{Fore.CYAN}-" * 70)
-        opcion = input(f"{Fore.YELLOW}Selecciona una opción (1-9): {Style.RESET_ALL}")
-        
+        opcion = input(f"{Fore.YELLOW}Selecciona una opción (1-6): {Style.RESET_ALL}")
+
         try:
             opcion = int(opcion)
             if opcion == 1:
@@ -461,15 +312,12 @@ def mostrar_menu_principal():
             elif opcion == 2:
                 generar_audio()
             elif opcion == 3:
-                generar_imagen()
-            
-            elif opcion == 4:
                 ejecutar_todos_pasos()
-            elif opcion == 5:
+            elif opcion == 4:
                 ver_historia_actual()
-            elif opcion == 6:
+            elif opcion == 5:
                 abrir_carpeta_historia()
-            elif opcion == 7:
+            elif opcion == 6:
                 print(f"{Fore.GREEN}¡Gracias por usar el Generador de Podcasts Reddit!{Style.RESET_ALL}")
                 break
             else:
