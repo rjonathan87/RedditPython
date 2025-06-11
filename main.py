@@ -199,74 +199,6 @@ def generar_audio():
         input("Presiona Enter para continuar...")
         return False
 
-def generar_imagen():
-    """Genera la imagen para la historia actual"""
-    try:
-        if not historia_actual["id"]:
-            print(f"{Fore.RED}❌ No hay ninguna historia activa. Primero obtén una historia.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-        
-        mostrar_titulo()
-        print(f"{Fore.YELLOW}🖼️ PASO 3: GENERAR IMAGEN{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}-" * 70)
-        print(f"Generando imagen para la historia: {historia_actual['titulo']}")
-        
-        # Importar y ejecutar la generación de imagen
-        from image_generator import generar_imagenes
-        resultado = generar_imagenes(historia_actual["id"], historia_actual["titulo"])
-        
-        if resultado:
-            # Actualizar estado
-            historia_actual["paso_actual"] = 3
-            if "Generar imagen" not in historia_actual["pasos_completados"]:
-                historia_actual["pasos_completados"].append("Generar imagen")
-            
-            print(f"{Fore.GREEN}✅ Imagen generada con éxito")
-        else:
-            print(f"{Fore.RED}❌ No se pudo generar la imagen")
-        
-        input(f"{Fore.YELLOW}Presiona Enter para continuar...{Style.RESET_ALL}")
-        return resultado
-    except Exception as e:
-        print(f"{Fore.RED}❌ Error al generar imagen: {str(e)}{Style.RESET_ALL}")
-        input("Presiona Enter para continuar...")
-        return False
-
-def dividir_video():
-    """Divide el video en segmentos para redes sociales"""
-    try:
-        if not historia_actual["id"]:
-            print(f"{Fore.RED}❌ No hay ninguna historia activa. Primero obtén una historia.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-        
-        mostrar_titulo()
-        print(f"{Fore.YELLOW}✂️ PASO 5: DIVIDIR VIDEO{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}-" * 70)
-        print(f"Dividiendo video para la historia: {historia_actual['titulo']}")
-        
-        # Importar y ejecutar la división del video
-        from video_splitter import dividir_video as split_video
-        resultado = split_video(historia_actual["id"])
-        
-        if resultado:
-            # Actualizar estado
-            historia_actual["paso_actual"] = 5
-            if "Dividir video" not in historia_actual["pasos_completados"]:
-                historia_actual["pasos_completados"].append("Dividir video")
-            
-            print(f"{Fore.GREEN}✅ Video dividido con éxito")
-        else:
-            print(f"{Fore.RED}❌ No se pudo dividir el video")
-        
-        input(f"{Fore.YELLOW}Presiona Enter para continuar...{Style.RESET_ALL}")
-        return resultado
-    except Exception as e:
-        print(f"{Fore.RED}❌ Error al dividir video: {str(e)}{Style.RESET_ALL}")
-        input("Presiona Enter para continuar...")
-        return False
-
 def ejecutar_todos_pasos():
     """Ejecuta todos los pasos automáticamente"""
     mostrar_titulo()
@@ -280,15 +212,7 @@ def ejecutar_todos_pasos():
     # Paso 2: Generar audio
     if not generar_audio():
         return
-    
-    # Paso 3: Generar imagen
-    if not generar_imagen():
-        return
-    
-    # Paso 5: Dividir video
-    if not dividir_video():
-        return
-    
+        
     # Todo completado
     mostrar_titulo()
     print(f"{Fore.GREEN}🎉 ¡TODOS LOS PASOS COMPLETADOS CON ÉXITO!{Style.RESET_ALL}")
@@ -356,26 +280,23 @@ def mostrar_menu_principal():
         print(f"{Fore.WHITE}-- PROCESO PASO A PASO --")
         print(f"{Fore.CYAN}1. 🔍 Obtener nueva historia de Reddit")
         print(f"{Fore.CYAN}2. 🔊 Generar audio")
-        print(f"{Fore.CYAN}3. 🖼️ Generar imagen")
-        print(f"{Fore.CYAN}4. 🎬 Crear video con subtítulos")
-        print(f"{Fore.CYAN}5. ✂️ Dividir video en segmentos")
         
         # Opción de flujo automático
         print(f"{Fore.WHITE}\n-- PROCESO AUTOMÁTICO --")
-        print(f"{Fore.CYAN}6. 🚀 Ejecutar todos los pasos automáticamente")
+        print(f"{Fore.CYAN}3. 🚀 Ejecutar todos los pasos automáticamente")
         
         # Opciones adicionales
         print(f"{Fore.WHITE}\n-- OPCIONES ADICIONALES --")
-        print(f"{Fore.CYAN}7. 📖 Ver contenido de la historia actual")
-        print(f"{Fore.CYAN}8. 📂 Abrir carpeta de la historia actual")
+        print(f"{Fore.CYAN}4. 📖 Ver contenido de la historia actual")
+        print(f"{Fore.CYAN}5. 📂 Abrir carpeta de la historia actual")
         
         # Salir
         print(f"{Fore.WHITE}\n-- SISTEMA --")
-        print(f"{Fore.CYAN}9. ❌ Salir")
+        print(f"{Fore.CYAN}6. ❌ Salir")
         
         print(f"{Fore.CYAN}-" * 70)
-        opcion = input(f"{Fore.YELLOW}Selecciona una opción (1-9): {Style.RESET_ALL}")
-        
+        opcion = input(f"{Fore.YELLOW}Selecciona una opción (1-6): {Style.RESET_ALL}")
+
         try:
             opcion = int(opcion)
             if opcion == 1:
@@ -383,15 +304,12 @@ def mostrar_menu_principal():
             elif opcion == 2:
                 generar_audio()
             elif opcion == 3:
-                generar_imagen()
-            
-            elif opcion == 4:
                 ejecutar_todos_pasos()
-            elif opcion == 5:
+            elif opcion == 4:
                 ver_historia_actual()
-            elif opcion == 6:
+            elif opcion == 5:
                 abrir_carpeta_historia()
-            elif opcion == 7:
+            elif opcion == 6:
                 print(f"{Fore.GREEN}¡Gracias por usar el Generador de Podcasts Reddit!{Style.RESET_ALL}")
                 break
             else:
