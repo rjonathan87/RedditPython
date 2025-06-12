@@ -1,11 +1,13 @@
+# Este archivo corrige los problemas con el generador de videos para TikTok
+
 import os
 import sys
 import json
-import urllib.request
 import re
 import subprocess
-from datetime import datetime
 import tempfile
+import traceback
+from datetime import datetime
 import requests
 from colorama import Fore, Style
 
@@ -58,17 +60,7 @@ def identificar_tipo_video():
             print(f"{Fore.RED}❌ Por favor, ingresa un número válido.{Style.RESET_ALL}")
 
 def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duracion_requerida=None):
-    """Descarga uno o varios videos de stock gratuito según el tipo seleccionado
-    
-    Args:
-        tipo_video: Tipo de video a buscar
-        duracion_minima: Duración mínima del video en segundos
-        modo_multiples: Si es True, descarga múltiples videos hasta alcanzar la duración requerida
-        duracion_requerida: Duración total requerida en segundos (para modo_multiples=True)
-    
-    Returns:
-        Una lista de rutas de videos descargados o una única ruta si modo_multiples es False
-    """
+    """Descarga uno o varios videos de stock gratuito según el tipo seleccionado"""
     print(f"{Fore.YELLOW}🔍 Buscando videos de '{tipo_video}'...{Style.RESET_ALL}")
     
     # Usar Pexels API para buscar videos
@@ -77,7 +69,8 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
     
     PEXELS_KEY = os.getenv('PEXELS_API_KEY') or os.getenv('PEXEL_API_KEY')
     if not PEXELS_KEY:
-        raise EnvironmentError("Variable PEXELS_API_KEY no definida en .env")    # Intentamos usar la biblioteca de Pexels
+        raise EnvironmentError("Variable PEXELS_API_KEY no definida en .env")
+        
     videos = None
     api = None
     
@@ -95,10 +88,6 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
         print(f"{Fore.RED}❌ No se encontraron videos para '{tipo_video}'.{Style.RESET_ALL}")
         return None
     
-    if not videos or not videos.get('videos'):
-        print(f"{Fore.RED}❌ No se encontraron videos para '{tipo_video}'.{Style.RESET_ALL}")
-        return None
-    
     if not modo_multiples:
         # Modo de un solo video
         # Descargar el primer video disponible
@@ -107,7 +96,7 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
             if not video_files:
                 continue
             
-                    # Encontrar el archivo con mejor resolución
+            # Encontrar el archivo con mejor resolución
             best = max(video_files, key=lambda f: f.get('width', 0))
             temp_path = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
             
@@ -134,7 +123,8 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
         duracion_total = 0
         videos_descargados = []
         videos_list = videos.get('videos', [])
-          # Si hay pocos videos, busquemos más en páginas adicionales
+        
+        # Si hay pocos videos, busquemos más en páginas adicionales
         if len(videos_list) < 10 and api and duracion_requerida:
             page = 2
             max_pages = 3
@@ -201,14 +191,7 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
         return videos_descargados
 
 def convertir_a_vertical(ruta_video_input):
-    """Convierte un video horizontal a formato vertical para TikTok (9:16)
-    
-    Args:
-        ruta_video_input: Ruta del video a convertir
-    
-    Returns:
-        Ruta del video convertido a formato vertical
-    """
+    """Convierte un video horizontal a formato vertical para TikTok (9:16)"""
     try:
         # Crear un nombre para el archivo temporal de salida
         video_vertical = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
@@ -218,7 +201,7 @@ def convertir_a_vertical(ruta_video_input):
         # Obtener información del video original
         info_cmd = [
             "ffprobe", "-v", "error", "-select_streams", "v:0",
-            "-show_entries", "stream=width,height",
+            "-show_entries", "stream=width,height,codec_name,display_aspect_ratio",
             "-of", "json", ruta_video_input
         ]
         
@@ -228,6 +211,9 @@ def convertir_a_vertical(ruta_video_input):
         # Extraer dimensiones
         width = int(video_info['streams'][0]['width'])
         height = int(video_info['streams'][0]['height'])
+        codec = video_info['streams'][0].get('codec_name', 'desconocido')
+        
+        print(f"{Fore.CYAN}ℹ️ Dimensiones originales del video: {width}x{height} (codec: {codec}){Style.RESET_ALL}")
         
         # Calcular dimensiones para formato vertical 9:16
         # Si el video ya es vertical, lo dejamos como está
@@ -243,14 +229,35 @@ def convertir_a_vertical(ruta_video_input):
         x_center = width / 2
         crop_x = max(0, int(x_center - new_width / 2))
         
+        print(f"{Fore.CYAN}ℹ️ Recortando a: {new_width}x{new_height}, desde X={crop_x}{Style.RESET_ALL}")
+        
         # Comando FFmpeg para recortar y redimensionar
+        # Usamos un bitrate razonable para asegurar buena calidad sin archivos enormes
         subprocess.run([
             "ffmpeg", "-y", "-i", ruta_video_input,
             "-vf", f"crop={new_width}:{new_height}:{crop_x}:0,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2",
+            "-c:v", "libx264", "-preset", "medium", "-crf", "23", 
             "-c:a", "copy", video_vertical
         ], check=True)
         
         print(f"{Fore.GREEN}✅ Video convertido a formato vertical (9:16) para TikTok{Style.RESET_ALL}")
+        
+        # Verificar dimensiones del video generado
+        info_cmd = [
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "json", video_vertical
+        ]
+        
+        info_result = subprocess.run(info_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        video_info = json.loads(info_result.stdout)
+        
+        # Extraer dimensiones
+        width_final = int(video_info['streams'][0]['width'])
+        height_final = int(video_info['streams'][0]['height'])
+        
+        print(f"{Fore.CYAN}ℹ️ Dimensiones finales del video: {width_final}x{height_final}{Style.RESET_ALL}")
+        
         return video_vertical
     
     except Exception as e:
@@ -258,20 +265,43 @@ def convertir_a_vertical(ruta_video_input):
         # Si falla, devolvemos el video original
         return ruta_video_input
 
+def verificar_sistema(ruta_directorio):
+    """Verifica si hay problemas de permisos o espacio en disco"""
+    try:
+        # Verificar permisos de escritura
+        print(f"{Fore.YELLOW}🔍 Verificando permisos y espacio en disco...{Style.RESET_ALL}")
+        test_file = os.path.join(ruta_directorio, "test_write.tmp")
+        with open(test_file, 'w') as f:
+            f.write("test" * 1024)  # Escribir 4KB para probar
+        os.remove(test_file)
+        print(f"{Fore.GREEN}✅ Permisos de escritura verificados en: {ruta_directorio}{Style.RESET_ALL}")
+        
+        # Verificar espacio en disco
+        if os.name == 'nt':  # Windows
+            import ctypes
+            free_bytes = ctypes.c_ulonglong(0)
+            ctypes.windll.kernel32.GetDiskFreeSpaceExW(ctypes.c_wchar_p(ruta_directorio), None, None, ctypes.pointer(free_bytes))
+            free_mb = free_bytes.value / (1024 * 1024)
+        else:  # Unix/Linux/Mac
+            import shutil
+            free_mb = shutil.disk_usage(ruta_directorio).free / (1024 * 1024)
+        
+        print(f"{Fore.CYAN}ℹ️ Espacio libre en disco: {free_mb:.2f} MB{Style.RESET_ALL}")
+        
+        if free_mb < 500:  # Menos de 500MB libre
+            print(f"{Fore.YELLOW}⚠️ Poco espacio libre en disco. Podría haber problemas al generar videos.{Style.RESET_ALL}")
+            return False
+        
+        return True
+    except Exception as e:
+        print(f"{Fore.RED}❌ Error al verificar sistema: {str(e)}{Style.RESET_ALL}")
+        return False
+
 def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
-    """Integra el audio de la narración con el video descargado
-    
-    Args:
-        historia_id: ID de la historia
-        ruta_videos_temp: Ruta del video o lista de rutas de videos
-        modo_multiples: Si es True, concatena múltiples videos
-    
-    Returns:
-        Ruta del video final generado o False si hay error
-    """
+    """Integra el audio de la narración con el video descargado"""
     if not verificar_ffmpeg():
         return False
-    
+        
     try:
         ruta_historia = f"historias/{historia_id}"
         
@@ -279,23 +309,14 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
         if not os.path.exists(ruta_historia):
             print(f"{Fore.RED}❌ La carpeta de historia no existe: {ruta_historia}{Style.RESET_ALL}")
             return False
-              # Verificar permisos de escritura
-        try:
-            test_file = os.path.join(ruta_historia, "test_write.tmp")
-            with open(test_file, 'w') as f:
-                f.write("test")
-            os.remove(test_file)
-            print(f"{Fore.GREEN}✅ Permisos de escritura verificados en: {ruta_historia}{Style.RESET_ALL}")
-        except Exception as e:
-            print(f"{Fore.RED}❌ Error de permisos en la carpeta: {str(e)}{Style.RESET_ALL}")
-            return False
+            
+        # Verificar permisos de escritura y espacio en disco
+        if not verificar_sistema(ruta_historia):
+            print(f"{Fore.YELLOW}⚠️ Se detectaron posibles problemas con el sistema de archivos.{Style.RESET_ALL}")
+            # Continuamos de todas formas, pero ya advertimos al usuario
             
         ruta_audio = os.path.join(ruta_historia, "narracion.mp3")
-        # Asegurarnos de usar la ruta absoluta para el archivo de salida
-        ruta_video_final = os.path.abspath(os.path.join(ruta_historia, "video_integrado.mp4"))
-        
-        # Asegurarnos de que la carpeta de destino existe
-        os.makedirs(os.path.dirname(ruta_video_final), exist_ok=True)
+        ruta_video_final = os.path.join(ruta_historia, "video_integrado.mp4")
         
         if not os.path.exists(ruta_audio):
             print(f"{Fore.RED}❌ No se encontró el archivo de audio narracion.mp3{Style.RESET_ALL}")
@@ -314,54 +335,31 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
             # Modo de un solo video en loop
             ruta_video_temp = ruta_videos_temp
             print(f"{Fore.CYAN}ℹ️ Usando un solo video en bucle para cubrir la duración del audio ({dur_audio:.2f}s){Style.RESET_ALL}")
-              # 2) Loopear video hasta cubrir audio si es necesario
+            
+            # 2) Loopear video hasta cubrir audio si es necesario
             loop_mp4 = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
             subprocess.run([
                 "ffmpeg", "-y", "-stream_loop", "-1", "-i", ruta_video_temp,
                 "-t", str(dur_audio), "-c", "copy", loop_mp4
             ], check=True)
-              # Convertir a formato vertical para TikTok
+            
+            # Convertir a formato vertical para TikTok
             loop_mp4_vertical = convertir_a_vertical(loop_mp4)
-              
-            # 3) Silenciar video y poner narración
+              # 3) Silenciar video y poner narración
             # Nota: No usamos -c:v copy aquí para evitar problemas de compatibilidad después de la conversión
             try:
                 print(f"{Fore.YELLOW}🔄 Aplicando audio al video vertical...{Style.RESET_ALL}")
                 print(f"{Fore.CYAN}ℹ️ Comando: ffmpeg -y -i {loop_mp4_vertical} -i {ruta_audio} -c:v libx264 -preset medium -c:a aac -map 0:v:0 -map 1:a:0 -shortest {ruta_video_final}{Style.RESET_ALL}")
                 
-                # Primero intentar con el método normal
+                # Ejecutar con captura de salida para diagnóstico
                 process = subprocess.run([
                     "ffmpeg", "-y", "-i", loop_mp4_vertical, "-i", ruta_audio,
                     "-c:v", "libx264", "-preset", "medium", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0",
                     "-shortest", ruta_video_final
-                ], capture_output=True, text=True)
+                ], check=False, capture_output=True, text=True)
                 
                 if process.returncode != 0:
                     print(f"{Fore.RED}❌ Error al ejecutar ffmpeg: {process.stderr}{Style.RESET_ALL}")
-                    # Intentar método alternativo
-                    print(f"{Fore.YELLOW}⚠️ Intentando método alternativo...{Style.RESET_ALL}")
-                    
-                    # Usar un archivo temporal en la misma carpeta
-                    temp_output = os.path.join(os.path.dirname(ruta_video_final), "temp_output.mp4")
-                    
-                    proceso_alt = subprocess.run([
-                        "ffmpeg", "-y", "-i", loop_mp4_vertical, "-i", ruta_audio,
-                        "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", 
-                        "-map", "0:v:0", "-map", "1:a:0",
-                        "-shortest", temp_output
-                    ], capture_output=True, text=True)
-                    
-                    if proceso_alt.returncode == 0 and os.path.exists(temp_output):
-                        try:
-                            # Copiar del archivo temporal al destino final
-                            import shutil
-                            shutil.copy2(temp_output, ruta_video_final)
-                            os.remove(temp_output)
-                            print(f"{Fore.GREEN}✅ Método alternativo exitoso{Style.RESET_ALL}")
-                        except Exception as e:
-                            print(f"{Fore.RED}❌ Error al copiar archivo temporal: {str(e)}{Style.RESET_ALL}")
-                    else:
-                        print(f"{Fore.RED}❌ Método alternativo también falló: {proceso_alt.stderr}{Style.RESET_ALL}")
                 else:
                     print(f"{Fore.GREEN}✅ FFmpeg completó correctamente{Style.RESET_ALL}")
                 
@@ -369,7 +367,6 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
                 print(f"{Fore.RED}❌ Error al aplicar audio: {str(e)}{Style.RESET_ALL}")
                 import traceback
                 print(f"{Fore.RED}Detalles del error: {traceback.format_exc()}{Style.RESET_ALL}")
-                return False
         else:
             # Modo de múltiples videos concatenados
             print(f"{Fore.CYAN}ℹ️ Concatenando {len(ruta_videos_temp)} videos para cubrir la duración del audio ({dur_audio:.2f}s){Style.RESET_ALL}")
@@ -413,68 +410,44 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
                     subprocess.run([
                         "ffmpeg", "-y", "-i", concat_mp4, "-t", str(dur_audio),
                         "-c", "copy", trimmed_mp4
-                    ], check=True)                    
+                    ], check=True)
                     video_final_temp = trimmed_mp4
                 else:
                     video_final_temp = concat_mp4
-                  # Primero convertimos a formato vertical
-                video_final_temp_vertical = convertir_a_vertical(video_final_temp)
                 
-                try:
-                    print(f"{Fore.YELLOW}🔄 Aplicando audio al video vertical...{Style.RESET_ALL}")
-                    print(f"{Fore.CYAN}ℹ️ Comando: ffmpeg -y -i {video_final_temp_vertical} -i {ruta_audio} -c:v libx264 -preset medium -c:a aac -map 0:v:0 -map 1:a:0 -shortest {ruta_video_final}{Style.RESET_ALL}")
-                    
-                    # Primero intentar con el método normal
-                    process = subprocess.run([
-                        "ffmpeg", "-y", "-i", video_final_temp_vertical, "-i", ruta_audio,
-                        "-c:v", "libx264", "-preset", "medium", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0",
-                        "-shortest", ruta_video_final
-                    ], capture_output=True, text=True)
-                    
-                    if process.returncode != 0:
-                        print(f"{Fore.RED}❌ Error al ejecutar ffmpeg: {process.stderr}{Style.RESET_ALL}")
-                        # Intentar método alternativo
-                        print(f"{Fore.YELLOW}⚠️ Intentando método alternativo...{Style.RESET_ALL}")
-                        
-                        # Usar un archivo temporal en la misma carpeta
-                        temp_output = os.path.join(os.path.dirname(ruta_video_final), "temp_output.mp4")
-                        
-                        proceso_alt = subprocess.run([
-                            "ffmpeg", "-y", "-i", video_final_temp_vertical, "-i", ruta_audio,
-                            "-c:v", "libx264", "-preset", "fast", "-crf", "23", "-c:a", "aac", 
-                            "-map", "0:v:0", "-map", "1:a:0",
-                            "-shortest", temp_output
-                        ], capture_output=True, text=True)
-                        
-                        if proceso_alt.returncode == 0 and os.path.exists(temp_output):
-                            try:
-                                # Copiar del archivo temporal al destino final
-                                import shutil
-                                shutil.copy2(temp_output, ruta_video_final)
-                                os.remove(temp_output)
-                                print(f"{Fore.GREEN}✅ Método alternativo exitoso{Style.RESET_ALL}")
-                            except Exception as e:
-                                print(f"{Fore.RED}❌ Error al copiar archivo temporal: {str(e)}{Style.RESET_ALL}")
-                        else:
-                            print(f"{Fore.RED}❌ Método alternativo también falló: {proceso_alt.stderr}{Style.RESET_ALL}")
-                    else:
-                        print(f"{Fore.GREEN}✅ FFmpeg completó correctamente{Style.RESET_ALL}")
-                    
-                except Exception as e:
-                    print(f"{Fore.RED}❌ Error al aplicar audio: {str(e)}{Style.RESET_ALL}")
-                    import traceback
-                    print(f"{Fore.RED}Detalles del error: {traceback.format_exc()}{Style.RESET_ALL}")
-                    return False
-              # Eliminar archivo temporal de lista
+            # Primero convertimos a formato vertical
+            video_final_temp_vertical = convertir_a_vertical(video_final_temp)
+              # Silenciar video y poner narración
+            try:
+                print(f"{Fore.YELLOW}🔄 Aplicando audio al video vertical...{Style.RESET_ALL}")
+                print(f"{Fore.CYAN}ℹ️ Comando: ffmpeg -y -i {video_final_temp_vertical} -i {ruta_audio} -c:v libx264 -preset medium -c:a aac -map 0:v:0 -map 1:a:0 -shortest {ruta_video_final}{Style.RESET_ALL}")
+                
+                # Ejecutar con captura de salida para diagnóstico
+                process = subprocess.run([
+                    "ffmpeg", "-y", "-i", video_final_temp_vertical, "-i", ruta_audio,
+                    "-c:v", "libx264", "-preset", "medium", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0",
+                    "-shortest", ruta_video_final
+                ], check=False, capture_output=True, text=True)
+                
+                if process.returncode != 0:
+                    print(f"{Fore.RED}❌ Error al ejecutar ffmpeg: {process.stderr}{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.GREEN}✅ FFmpeg completó correctamente{Style.RESET_ALL}")
+                
+            except Exception as e:
+                print(f"{Fore.RED}❌ Error al aplicar audio: {str(e)}{Style.RESET_ALL}")
+                import traceback
+                print(f"{Fore.RED}Detalles del error: {traceback.format_exc()}{Style.RESET_ALL}")
+            
+            # Eliminar archivo temporal de lista
             os.unlink(concat_list.name)
-          
-        # Verificar explícitamente que el archivo se ha creado
+          # Verificar explícitamente que el archivo se ha creado
         print(f"{Fore.YELLOW}🔍 Verificando si el archivo de video fue creado...{Style.RESET_ALL}")
         print(f"{Fore.CYAN}ℹ️ Buscando archivo en: {ruta_video_final}{Style.RESET_ALL}")
         
         # Dar tiempo al sistema de archivos para actualizar
         import time
-        time.sleep(2)
+        time.sleep(1)
         
         if os.path.exists(ruta_video_final):
             tamano_mb = os.path.getsize(ruta_video_final) / (1024*1024)
@@ -489,7 +462,7 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
             if archivos_video:
                 print(f"{Fore.YELLOW}⚠️ Se encontraron otros archivos de video en la carpeta: {', '.join(archivos_video)}{Style.RESET_ALL}")
             
-            # Intentar crear una copia del video vertical (sin audio) como alternativa
+            # Intentar guardar con un nombre diferente
             try:
                 if 'video_final_temp_vertical' in locals() and os.path.exists(video_final_temp_vertical):
                     ruta_alternativa = os.path.join(os.path.dirname(ruta_video_final), "video_alternativo.mp4")
@@ -500,32 +473,11 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
             except Exception as e:
                 print(f"{Fore.RED}❌ Error al intentar guardar una copia alternativa: {str(e)}{Style.RESET_ALL}")
             
-            # Como último recurso, intentar usar corrector_video.py
-            try:
-                print(f"{Fore.YELLOW}⚠️ Intentando usar corrector_video.py como último recurso...{Style.RESET_ALL}")
-                subprocess.run([sys.executable, "corrector_video.py", historia_id], check=True)
-                
-                # Verificar si se creó el video con el corrector
-                ruta_alternativa = os.path.join(ruta_historia, "video_tiktok.mp4")
-                if os.path.exists(ruta_alternativa):
-                    print(f"{Fore.GREEN}✅ Se ha generado un video alternativo con el corrector: {ruta_alternativa}{Style.RESET_ALL}")
-                    # Intentar copiar a la ruta esperada
-                    try:
-                        shutil.copy2(ruta_alternativa, ruta_video_final)
-                        print(f"{Fore.GREEN}✅ Video copiado a la ruta estándar.{Style.RESET_ALL}")
-                        return ruta_video_final
-                    except:
-                        return ruta_alternativa
-                        
-            except Exception as e:
-                print(f"{Fore.RED}❌ Error al intentar usar el corrector: {str(e)}{Style.RESET_ALL}")
-            
             return False
         
     except Exception as e:
         print(f"{Fore.RED}❌ Error al integrar audio y video: {str(e)}{Style.RESET_ALL}")
         # Intentar recopilar más información sobre el error
-        import traceback
         print(f"{Fore.RED}Detalles del error: {traceback.format_exc()}{Style.RESET_ALL}")
         return False
 

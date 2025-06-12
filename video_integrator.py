@@ -125,6 +125,64 @@ def descargar_video(tipo_video, duracion_minima=60):
     
     return None
 
+def convertir_a_vertical(ruta_video_input):
+    """Convierte un video horizontal a formato vertical para TikTok (9:16)
+    
+    Args:
+        ruta_video_input: Ruta del video a convertir
+    
+    Returns:
+        Ruta del video convertido a formato vertical
+    """
+    try:
+        # Crear un nombre para el archivo temporal de salida
+        video_vertical = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
+        
+        print(f"{Fore.CYAN}ℹ️ Convirtiendo video a formato vertical para TikTok...{Style.RESET_ALL}")
+        
+        # Obtener información del video original
+        info_cmd = [
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "json", ruta_video_input
+        ]
+        
+        info_result = subprocess.run(info_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        video_info = json.loads(info_result.stdout)
+        
+        # Extraer dimensiones
+        width = int(video_info['streams'][0]['width'])
+        height = int(video_info['streams'][0]['height'])
+        
+        # Calcular dimensiones para formato vertical 9:16
+        # Si el video ya es vertical, lo dejamos como está
+        if height > width:
+            print(f"{Fore.CYAN}ℹ️ El video ya está en formato vertical. Manteniendo dimensiones originales.{Style.RESET_ALL}")
+            return ruta_video_input
+        
+        # Para videos horizontales, recortamos del centro y redimensionamos
+        new_height = height
+        new_width = int(height * 9 / 16)  # Relación de aspecto 9:16
+        
+        # Calcular el punto de inicio para el recorte centrado
+        x_center = width / 2
+        crop_x = max(0, int(x_center - new_width / 2))
+        
+        # Comando FFmpeg para recortar y redimensionar
+        subprocess.run([
+            "ffmpeg", "-y", "-i", ruta_video_input,
+            "-vf", f"crop={new_width}:{new_height}:{crop_x}:0,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2",
+            "-c:a", "copy", video_vertical
+        ], check=True)
+        
+        print(f"{Fore.GREEN}✅ Video convertido a formato vertical (9:16) para TikTok{Style.RESET_ALL}")
+        return video_vertical
+    
+    except Exception as e:
+        print(f"{Fore.RED}❌ Error al convertir video a formato vertical: {str(e)}{Style.RESET_ALL}")
+        # Si falla, devolvemos el video original
+        return ruta_video_input
+
 def integrar_audio_video(historia_id, ruta_video_temp):
     """Integra el audio de la narración con el video descargado"""
     if not verificar_ffmpeg():
@@ -147,7 +205,6 @@ def integrar_audio_video(historia_id, ruta_video_temp):
             "format=duration", "-of", "default=noprint_wrappers=1:nokey=1",
             ruta_audio
         ]).strip())
-        
         # 2) Loopear video hasta cubrir audio si es necesario
         loop_mp4 = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
         subprocess.run([
@@ -155,9 +212,12 @@ def integrar_audio_video(historia_id, ruta_video_temp):
             "-t", str(dur_audio), "-c", "copy", loop_mp4
         ], check=True)
         
+        # Convertir a formato vertical para TikTok
+        loop_mp4_vertical = convertir_a_vertical(loop_mp4)
+        
         # 3) Silenciar video y poner narración
         subprocess.run([
-            "ffmpeg", "-y", "-i", loop_mp4, "-i", ruta_audio,
+            "ffmpeg", "-y", "-i", loop_mp4_vertical, "-i", ruta_audio,
             "-c:v", "copy", "-c:a", "aac", "-map", "0:v:0", "-map", "1:a:0",
             "-shortest", ruta_video_final
         ], check=True)
