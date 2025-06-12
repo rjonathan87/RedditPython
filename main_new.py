@@ -208,32 +208,10 @@ def generar_audio():
         return False
 
 def integrar_video():
-    """Integra un video con el audio de la historia actual"""
-    try:        
-        if not historia_actual["id"]:
-            print(f"{Fore.RED}❌ No hay ninguna historia activa. Primero obtén una historia.{Style.RESET_ALL}")
-            input("Presiona Enter para continuar...")
-            return False
-        
-        mostrar_titulo()
-        print(f"{Fore.YELLOW}🎥 PASO 3: INTEGRAR VIDEO{Style.RESET_ALL}")
-        print(f"{Fore.CYAN}-" * 70)
-        print(f"Integrando video para la historia: {historia_actual['titulo']}")
-        
-        # Importar y ejecutar la integración de video
-        from video_integrator_new import integrar_video as integrar
-        integrar(historia_actual["id"])
-        
-        # Actualizar estado
-        historia_actual["paso_actual"] = 3
-        if "Integrar video" not in historia_actual["pasos_completados"]:
-            historia_actual["pasos_completados"].append("Integrar video")
-        
-        return True
-    except Exception as e:
-        print(f"{Fore.RED}❌ Error al integrar video: {str(e)}{Style.RESET_ALL}")
-        input("Presiona Enter para continuar...")
-        return False
+    """Importa y ejecuta la función de integración de video"""
+    from video_module import integrar_video as integrar_video_fn
+    mostrar_titulo()
+    return integrar_video_fn(historia_actual)
 
 def ejecutar_todos_pasos():
     """Ejecuta todos los pasos automáticamente"""
@@ -330,7 +308,8 @@ def mostrar_menu_principal():
         print(f"{Fore.WHITE}\n-- OPCIONES ADICIONALES --")
         print(f"{Fore.CYAN}5. 📖 Ver contenido de la historia actual")
         print(f"{Fore.CYAN}6. 📂 Abrir carpeta de la historia actual")
-          # Salir
+        
+        # Salir
         print(f"{Fore.WHITE}\n-- SISTEMA --")
         print(f"{Fore.CYAN}7. ❌ Salir")
         
