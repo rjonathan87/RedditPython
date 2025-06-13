@@ -233,7 +233,7 @@ def obtener_historia():
                         linea_limpia = linea.replace("[", "").replace("]", "").replace("*", "").strip()
                         if linea_limpia:  # Solo añadir líneas no vacías
                             lineas_filtradas.append(linea_limpia)
-                      # La primera línea debe ser el título, el resto es el contenido
+                    # La primera línea debe ser el título, el resto es el contenido
                     if lineas_filtradas:
                         titulo_mejorado = lineas_filtradas[0].replace("Título mejorado:", "").strip()
                         texto_mejorado = "\n".join(lineas_filtradas[1:]).replace("Texto mejorado:", "").strip()
@@ -274,4 +274,130 @@ def obtener_historia():
     except Exception as e:
         print(f"Error obteniendo historia: {e}")
         return None, None, None
+        
+def obtener_multiples_historias(cantidad=5):
+    """Obtiene múltiples historias de Reddit
+    
+    Args:
+        cantidad: Número de historias a obtener
+        
+    Returns:
+        Lista de tuplas (historia_id, titulo, texto)
+    """
+    historias = []
+    try:
+        subreddit = reddit.subreddit("nosleep")
+        posts = list(subreddit.hot(limit=40))  # Obtenemos más posts para tener margen
+        
+        # Contamos los posts procesados para evitar bucles infinitos
+        posts_procesados = 0
+        
+        for post in posts:
+            if len(historias) >= cantidad:
+                break
+                
+            # Si ya hemos procesado demasiados posts, salimos
+            posts_procesados += 1
+            if posts_procesados > 40:
+                print("⚠️ Se ha alcanzado el límite de posts procesados")
+                break
+                
+            # Si ya hemos consultado esta historia, la saltamos
+            if post.id in historias_consultadas:
+                continue
+
+            if post.selftext:
+                titulo = post.title
+                historia = post.selftext
+
+                if not historia or historia.isspace():
+                    print("❌ El texto de la historia está vacío. Saltando al siguiente post...")
+                    continue
+
+                print(f"🔄 Procesando historia: {titulo}")
+                
+                # Crear carpeta para la historia
+                historia_id, ruta = crear_carpeta_historia()
+                
+                # Detectar idioma y traducir si es necesario
+                idioma = detectar_idioma(historia)
+                if idioma != "es":
+                    print(f"🔍 Idioma detectado: {idioma}. Traduciendo al español...")
+                    titulo = traducir_a_espanol(titulo)
+                    historia = traducir_a_espanol(historia)
+                    print("✨ Mejorando la historia con DeepSeek...")                      
+                    historia_mejorada = mejorar_historia(titulo, historia)
+                
+                    if historia_mejorada:
+                        # Procesar la respuesta para eliminar los marcadores entre corchetes
+                        lineas = historia_mejorada.splitlines()
+                        
+                        # Filtrar líneas que contengan metadatos o formatos
+                        lineas_filtradas = []
+                        for linea in lineas:
+                            # Ignorar líneas con metadatos o formatos específicos
+                            if ("**Género" in linea or 
+                                "Recursos literarios" in linea or 
+                                "Terror psicológico" in linea or
+                                "misterio sobrenatural" in linea or
+                                "Presagios" in linea or
+                                "narrador poco fiable" in linea or
+                                "atmósfera claustrofóbica" in linea or
+                                "---" == linea.strip() or
+                                "[Género" in linea or
+                                "**Título" in linea):
+                                continue
+                            
+                            # Limpiar la línea de marcadores
+                            linea_limpia = linea.replace("[", "").replace("]", "").replace("*", "").strip()
+                            if linea_limpia:  # Solo añadir líneas no vacías
+                                lineas_filtradas.append(linea_limpia)
+                        
+                        # La primera línea debe ser el título, el resto es el contenido
+                        if lineas_filtradas:
+                            titulo_mejorado = lineas_filtradas[0].replace("Título mejorado:", "").strip()
+                            texto_mejorado = "\n".join(lineas_filtradas[1:]).replace("Texto mejorado:", "").strip()
+                        else:
+                            titulo_mejorado = titulo  # Usar el título original si no encontramos uno mejorado
+                            texto_mejorado = historia  # Usar la historia original si no encontramos una mejorada
+                            
+                        # Guardar los archivos
+                        with open(f"{ruta}/historia.txt", "w", encoding="utf-8") as f:
+                            # Guardamos solo el título y el texto mejorado, sin ningún formato
+                            f.write(f"{titulo_mejorado}\n{texto_mejorado}")
+
+                        with open(f"{ruta}/metadata.json", "w", encoding="utf-8") as f:
+                            json.dump(
+                                {
+                                    "id": historia_id,
+                                    "titulo": titulo_mejorado,
+                                    "ruta": ruta,
+                                },
+                                f,
+                            )
+
+                        with open(f"{ruta}/historia.json", "w", encoding="utf-8") as f:
+                            json.dump(
+                                {
+                                    "título": titulo_mejorado,
+                                    "historia": texto_mejorado,
+                                    "descripción": f"📖 {titulo_mejorado}\n\n¡Una historia de terror que te pondrá los pelos de punta! 😱",
+                                    "hashtags": "#terrorparanodormir #miedoyterror #historiasterror #terror #miedo #paranormal #relatos",
+                                },
+                                f,
+                                ensure_ascii=False,
+                                indent=4,
+                            )
+
+                        historias_consultadas.add(post.id)
+                        print(f"✅ Historia mejorada guardada en {ruta}")
+                        
+                        # Añadir la historia a la lista de historias procesadas
+                        historias.append((historia_id, titulo_mejorado, texto_mejorado))
+        
+        print(f"✅ Se obtuvieron {len(historias)} historias de un total de {cantidad} solicitadas")
+        return historias
+    except Exception as e:
+        print(f"Error obteniendo múltiples historias: {e}")
+        return historias  # Devolvemos las historias que pudimos obtener
 

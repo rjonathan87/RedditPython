@@ -322,6 +322,7 @@ def mostrar_menu_principal():
         print(f"{Fore.CYAN}2. 🔊 Generar audio")
         print(f"{Fore.CYAN}3. 🎥 Integrar video")
         
+        
         # Opción de flujo automático
         print(f"{Fore.WHITE}\n-- PROCESO AUTOMÁTICO --")
         print(f"{Fore.CYAN}4. 🚀 Ejecutar todos los pasos automáticamente")
@@ -330,10 +331,10 @@ def mostrar_menu_principal():
         print(f"{Fore.WHITE}\n-- OPCIONES ADICIONALES --")
         print(f"{Fore.CYAN}5. 📖 Ver contenido de la historia actual")
         print(f"{Fore.CYAN}6. 📂 Abrir carpeta de la historia actual")
-          # Salir
+        # Salir
         print(f"{Fore.WHITE}\n-- SISTEMA --")
         print(f"{Fore.CYAN}7. ❌ Salir")
-        
+
         print(f"{Fore.CYAN}-" * 70)
         opcion = input(f"{Fore.YELLOW}Selecciona una opción (1-7): {Style.RESET_ALL}")
 
