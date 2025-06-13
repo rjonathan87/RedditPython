@@ -80,12 +80,11 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
         raise EnvironmentError("Variable PEXELS_API_KEY no definida en .env")    # Intentamos usar la biblioteca de Pexels
     videos = None
     api = None
-    
     try:
         # Usar pexelsapi que parece estar disponible
         from pexelsapi.pexels import Pexels
         api = Pexels(PEXELS_KEY)
-        videos = api.search_videos(query=tipo_video, page=1, per_page=15 if modo_multiples else 5)
+        videos = api.search_videos(query=tipo_video, orientation="portrait", page=1, per_page=15 if modo_multiples else 5)
     except Exception as e:
         print(f"{Fore.RED}❌ Error al buscar videos con pexelsapi: {str(e)}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}ℹ️ Asegúrate de tener la biblioteca 'pexelsapi' instalada correctamente.{Style.RESET_ALL}")
@@ -134,13 +133,13 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
         duracion_total = 0
         videos_descargados = []
         videos_list = videos.get('videos', [])
-          # Si hay pocos videos, busquemos más en páginas adicionales
+        # Si hay pocos videos, busquemos más en páginas adicionales
         if len(videos_list) < 10 and api and duracion_requerida:
             page = 2
-            max_pages = 3
+            max_pages = 3            
             while len(videos_list) < 15 and page <= max_pages:
                 try:
-                    additional_videos = api.search_videos(query=tipo_video, page=page, per_page=15)
+                    additional_videos = api.search_videos(query=tipo_video, orientation="portrait", page=page, per_page=15)
                     
                     if additional_videos and additional_videos.get('videos'):
                         videos_list.extend(additional_videos['videos'])
@@ -242,12 +241,12 @@ def convertir_a_vertical(ruta_video_input):
         # Calcular el punto de inicio para el recorte centrado
         x_center = width / 2
         crop_x = max(0, int(x_center - new_width / 2))
-        
-        # Comando FFmpeg para recortar y redimensionar
+          # Comando FFmpeg para recortar y redimensionar
         subprocess.run([
             "ffmpeg", "-y", "-i", ruta_video_input,
             "-vf", f"crop={new_width}:{new_height}:{crop_x}:0,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2",
-            "-c:a", "copy", video_vertical
+            "-c:v", "libx264", "-preset", "medium", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k", video_vertical
         ], check=True)
         
         print(f"{Fore.GREEN}✅ Video convertido a formato vertical (9:16) para TikTok{Style.RESET_ALL}")
@@ -279,7 +278,7 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
         if not os.path.exists(ruta_historia):
             print(f"{Fore.RED}❌ La carpeta de historia no existe: {ruta_historia}{Style.RESET_ALL}")
             return False
-              # Verificar permisos de escritura
+        # Verificar permisos de escritura
         try:
             test_file = os.path.join(ruta_historia, "test_write.tmp")
             with open(test_file, 'w') as f:
@@ -314,15 +313,15 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
             # Modo de un solo video en loop
             ruta_video_temp = ruta_videos_temp
             print(f"{Fore.CYAN}ℹ️ Usando un solo video en bucle para cubrir la duración del audio ({dur_audio:.2f}s){Style.RESET_ALL}")
-              # 2) Loopear video hasta cubrir audio si es necesario
+            # 2) Loopear video hasta cubrir audio si es necesario
             loop_mp4 = tempfile.NamedTemporaryFile(delete=False, suffix='.mp4').name
             subprocess.run([
                 "ffmpeg", "-y", "-stream_loop", "-1", "-i", ruta_video_temp,
                 "-t", str(dur_audio), "-c", "copy", loop_mp4
             ], check=True)
-              # Convertir a formato vertical para TikTok
+            # Convertir a formato vertical para TikTok
             loop_mp4_vertical = convertir_a_vertical(loop_mp4)
-              
+
             # 3) Silenciar video y poner narración
             # Nota: No usamos -c:v copy aquí para evitar problemas de compatibilidad después de la conversión
             try:
@@ -417,7 +416,7 @@ def integrar_audio_video(historia_id, ruta_videos_temp, modo_multiples=False):
                     video_final_temp = trimmed_mp4
                 else:
                     video_final_temp = concat_mp4
-                  # Primero convertimos a formato vertical
+                # Primero convertimos a formato vertical
                 video_final_temp_vertical = convertir_a_vertical(video_final_temp)
                 
                 try:

@@ -73,12 +73,11 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
         
     videos = None
     api = None
-    
     try:
         # Usar pexelsapi que parece estar disponible
         from pexelsapi.pexels import Pexels
         api = Pexels(PEXELS_KEY)
-        videos = api.search_videos(query=tipo_video, page=1, per_page=15 if modo_multiples else 5)
+        videos = api.search_videos(query=tipo_video, orientation="portrait", page=1, per_page=15 if modo_multiples else 5)
     except Exception as e:
         print(f"{Fore.RED}❌ Error al buscar videos con pexelsapi: {str(e)}{Style.RESET_ALL}")
         print(f"{Fore.YELLOW}ℹ️ Asegúrate de tener la biblioteca 'pexelsapi' instalada correctamente.{Style.RESET_ALL}")
@@ -130,7 +129,7 @@ def descargar_video(tipo_video, duracion_minima=60, modo_multiples=False, duraci
             max_pages = 3
             while len(videos_list) < 15 and page <= max_pages:
                 try:
-                    additional_videos = api.search_videos(query=tipo_video, page=page, per_page=15)
+                    additional_videos = api.search_videos(query=tipo_video, orientation="portrait", page=page, per_page=15)
                     
                     if additional_videos and additional_videos.get('videos'):
                         videos_list.extend(additional_videos['videos'])
@@ -230,14 +229,13 @@ def convertir_a_vertical(ruta_video_input):
         crop_x = max(0, int(x_center - new_width / 2))
         
         print(f"{Fore.CYAN}ℹ️ Recortando a: {new_width}x{new_height}, desde X={crop_x}{Style.RESET_ALL}")
-        
-        # Comando FFmpeg para recortar y redimensionar
+          # Comando FFmpeg para recortar y redimensionar
         # Usamos un bitrate razonable para asegurar buena calidad sin archivos enormes
         subprocess.run([
             "ffmpeg", "-y", "-i", ruta_video_input,
             "-vf", f"crop={new_width}:{new_height}:{crop_x}:0,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2",
             "-c:v", "libx264", "-preset", "medium", "-crf", "23", 
-            "-c:a", "copy", video_vertical
+            "-c:a", "aac", "-b:a", "128k", video_vertical
         ], check=True)
         
         print(f"{Fore.GREEN}✅ Video convertido a formato vertical (9:16) para TikTok{Style.RESET_ALL}")

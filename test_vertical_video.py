@@ -98,8 +98,7 @@ def convertir_a_vertical(ruta_video_input):
         stream = info_video.get('streams', [{}])[0]
         width = int(stream.get('width', 0))
         height = int(stream.get('height', 0))
-        
-        # Si el video ya es vertical, lo dejamos como está
+          # Si el video ya es vertical, lo dejamos como está
         if height > width:
             print(f"{Fore.CYAN}ℹ️ El video ya está en formato vertical. No se requiere conversión.{Style.RESET_ALL}")
             return ruta_video_input
@@ -118,12 +117,11 @@ def convertir_a_vertical(ruta_video_input):
         crop_x = max(0, int(x_center - new_width / 2))
         
         print(f"{Fore.CYAN}ℹ️ Recortando a: {new_width}x{new_height}, desde X={crop_x}{Style.RESET_ALL}")
-        
-        # Comando FFmpeg para recortar y redimensionar
+          # Comando FFmpeg para recortar y redimensionar
         cmd = [
             "ffmpeg", "-y", "-i", ruta_video_input,
             "-vf", f"crop={new_width}:{new_height}:{crop_x}:0,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2",
-            "-c:v", "libx264", "-preset", "medium", "-c:a", "copy", video_vertical
+            "-c:v", "libx264", "-preset", "medium", "-crf", "23", "-c:a", "aac", "-b:a", "128k", video_vertical
         ]
         
         print(f"{Fore.YELLOW}🔧 Ejecutando comando:{Style.RESET_ALL}")

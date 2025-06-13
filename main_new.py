@@ -208,10 +208,32 @@ def generar_audio():
         return False
 
 def integrar_video():
-    """Importa y ejecuta la función de integración de video"""
-    from video_module import integrar_video as integrar_video_fn
-    mostrar_titulo()
-    return integrar_video_fn(historia_actual)
+    """Integra un video con el audio de la historia actual"""
+    try:        
+        if not historia_actual["id"]:
+            print(f"{Fore.RED}❌ No hay ninguna historia activa. Primero obtén una historia.{Style.RESET_ALL}")
+            input("Presiona Enter para continuar...")
+            return False
+        
+        mostrar_titulo()
+        print(f"{Fore.YELLOW}🎥 PASO 3: INTEGRAR VIDEO{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}-" * 70)
+        print(f"Integrando video para la historia: {historia_actual['titulo']}")
+        
+        # Importar y ejecutar la integración de video
+        from video_integrator import integrar_video as integrar
+        integrar(historia_actual["id"])
+        
+        # Actualizar estado
+        historia_actual["paso_actual"] = 3
+        if "Integrar video" not in historia_actual["pasos_completados"]:
+            historia_actual["pasos_completados"].append("Integrar video")
+        
+        return True
+    except Exception as e:
+        print(f"{Fore.RED}❌ Error al integrar video: {str(e)}{Style.RESET_ALL}")
+        input("Presiona Enter para continuar...")
+        return False
 
 def ejecutar_todos_pasos():
     """Ejecuta todos los pasos automáticamente"""
@@ -238,6 +260,75 @@ def ejecutar_todos_pasos():
     print(f"Historia: {historia_actual['titulo']}")
     print(f"ID: {historia_actual['id']}")
     print(f"Ruta: historias/{historia_actual['id']}")
+    print(f"{Fore.CYAN}-" * 70)
+    input(f"{Fore.YELLOW}Presiona Enter para volver al menú principal...{Style.RESET_ALL}")
+
+def procesar_multiples_historias(cantidad=5):
+    """Procesa múltiples historias de Reddit automáticamente
+    
+    Args:
+        cantidad: Número de historias a procesar (por defecto 5)
+    """
+    mostrar_titulo()
+    print(f"{Fore.YELLOW}🚀 PROCESAMIENTO AUTOMÁTICO DE {cantidad} HISTORIAS{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}-" * 70)
+    print(f"Este proceso descargará {cantidad} historias de Reddit y generará")
+    print(f"automáticamente el audio y video para cada una de ellas.")
+    print(f"{Fore.CYAN}-" * 70)
+    
+    # Importar después de verificar los requisitos
+    from story_fetcher import obtener_multiples_historias
+    from audio_generator import texto_a_audio
+    from video_integrator import integrar_video
+    
+    # Obtener múltiples historias
+    print(f"{Fore.YELLOW}🔍 Obteniendo {cantidad} historias de Reddit...{Style.RESET_ALL}")
+    historias = obtener_multiples_historias(cantidad)
+    
+    if not historias:
+        print(f"{Fore.RED}❌ No se pudieron obtener historias de Reddit.{Style.RESET_ALL}")
+        input("Presiona Enter para continuar...")
+        return
+    
+    print(f"{Fore.GREEN}✅ Se obtuvieron {len(historias)} historias de Reddit{Style.RESET_ALL}")
+    
+    # Procesar cada historia
+    for i, (historia_id, titulo, texto) in enumerate(historias, 1):
+        print(f"\n{Fore.CYAN}=" * 70)
+        print(f"{Fore.YELLOW}Historia {i}/{len(historias)}: {titulo}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}=" * 70)
+        
+        # Actualizar el estado global
+        historia_actual["id"] = historia_id
+        historia_actual["titulo"] = titulo
+        historia_actual["texto"] = texto
+        
+        try:
+            # Paso 1: Ya tenemos la historia
+            print(f"{Fore.GREEN}✅ Historia obtenida con éxito: {titulo}")
+            print(f"{Fore.GREEN}✅ ID de la historia: {historia_id}")
+            
+            # Paso 2: Generar audio
+            print(f"\n{Fore.YELLOW}🔊 Generando audio para: {titulo}{Style.RESET_ALL}")
+            texto_a_audio(historia_id)
+            print(f"{Fore.GREEN}✅ Audio generado con éxito{Style.RESET_ALL}")
+              # Paso 3: Integrar video
+            print(f"\n{Fore.YELLOW}🎥 Integrando video para: {titulo}{Style.RESET_ALL}")
+            integrar_video(historia_id, True)  # Usar selección aleatoria de video
+            print(f"{Fore.GREEN}✅ Video integrado con éxito{Style.RESET_ALL}")
+            
+            print(f"\n{Fore.GREEN}✅ Procesamiento completo para la historia: {titulo}{Style.RESET_ALL}")
+            print(f"{Fore.GREEN}✅ Archivos guardados en: historias/{historia_id}{Style.RESET_ALL}")
+            
+        except Exception as e:
+            print(f"{Fore.RED}❌ Error al procesar la historia: {str(e)}{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}⚠️ Continuando con la siguiente historia...{Style.RESET_ALL}")
+            continue
+    
+    # Resumen final
+    print(f"\n{Fore.GREEN}🎉 ¡PROCESAMIENTO DE MÚLTIPLES HISTORIAS COMPLETADO!{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}-" * 70)
+    print(f"{Fore.YELLOW}Se procesaron {len(historias)} historias de Reddit{Style.RESET_ALL}")
     print(f"{Fore.CYAN}-" * 70)
     input(f"{Fore.YELLOW}Presiona Enter para volver al menú principal...{Style.RESET_ALL}")
 
@@ -300,21 +391,22 @@ def mostrar_menu_principal():
         print(f"{Fore.CYAN}2. 🔊 Generar audio")
         print(f"{Fore.CYAN}3. 🎥 Integrar video")
         
+        
         # Opción de flujo automático
         print(f"{Fore.WHITE}\n-- PROCESO AUTOMÁTICO --")
         print(f"{Fore.CYAN}4. 🚀 Ejecutar todos los pasos automáticamente")
+        print(f"{Fore.CYAN}5. 📚 Procesar 5 historias automáticamente")
         
         # Opciones adicionales
         print(f"{Fore.WHITE}\n-- OPCIONES ADICIONALES --")
-        print(f"{Fore.CYAN}5. 📖 Ver contenido de la historia actual")
-        print(f"{Fore.CYAN}6. 📂 Abrir carpeta de la historia actual")
-        
+        print(f"{Fore.CYAN}6. 📖 Ver contenido de la historia actual")
+        print(f"{Fore.CYAN}7. 📂 Abrir carpeta de la historia actual")
         # Salir
         print(f"{Fore.WHITE}\n-- SISTEMA --")
-        print(f"{Fore.CYAN}7. ❌ Salir")
-        
+        print(f"{Fore.CYAN}8. ❌ Salir")
+
         print(f"{Fore.CYAN}-" * 70)
-        opcion = input(f"{Fore.YELLOW}Selecciona una opción (1-7): {Style.RESET_ALL}")
+        opcion = input(f"{Fore.YELLOW}Selecciona una opción (1-8): {Style.RESET_ALL}")
 
         try:
             opcion = int(opcion)
@@ -327,10 +419,12 @@ def mostrar_menu_principal():
             elif opcion == 4:
                 ejecutar_todos_pasos()
             elif opcion == 5:
-                ver_historia_actual()
+                procesar_multiples_historias(5)
             elif opcion == 6:
-                abrir_carpeta_historia()
+                ver_historia_actual()
             elif opcion == 7:
+                abrir_carpeta_historia()
+            elif opcion == 8:
                 print(f"{Fore.GREEN}¡Gracias por usar el Generador de Podcasts Reddit!{Style.RESET_ALL}")
                 break
             else:
